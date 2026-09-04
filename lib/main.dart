@@ -1,9 +1,10 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'screens/products_screen.dart';
 import 'screens/billing_screen.dart';
 import 'screens/reports_screen.dart';
 import 'screens/analytics_screen.dart';
 import 'screens/udhaar_screen.dart';
+import 'screens/settings_screen.dart';
 
 void main() {
   runApp(const ShopApp());
