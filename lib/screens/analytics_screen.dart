@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
@@ -383,7 +383,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
             Row(
               children: [
                 _buildMetricBox('Sales Revenue', 'Rs. ${sales.toStringAsFixed(2)}',
-                    Icons.monetization_on_outlined, Colors.green.shade800),
+                    null, Colors.green.shade800),
                 const SizedBox(width: 12),
                 _buildMetricBox(
                     'Estimated Profit',
