@@ -39,6 +39,7 @@ const List<_NavItem> _navItems = [
   _NavItem(Icons.menu_book_outlined, 'Udhaar Book', 'Udhaar Book'),
   _NavItem(Icons.bar_chart, 'Reports', 'Reports & Profit Analytics'),
   _NavItem(Icons.insights, 'Analytics', 'Sales Progress & Analytics'),
+  _NavItem(Icons.settings_outlined, 'Settings', 'Settings'),
 ];
 
 class HomeScreen extends StatefulWidget {
@@ -55,6 +56,7 @@ class _HomeScreenState extends State<HomeScreen> {
     UdhaarScreen(),
     ReportsScreen(),
     AnalyticsScreen(),
+    SettingsScreen(),
   ];
 
   @override
