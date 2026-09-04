@@ -418,10 +418,10 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(label,
-                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500)),
+                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: Colors.black54)),
                   const SizedBox(height: 2),
                   Text(value,
-                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black87),
                       overflow: TextOverflow.ellipsis),
                 ],
               ),

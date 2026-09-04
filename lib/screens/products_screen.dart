@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:drift/drift.dart' show Value;
 import '../database/database.dart';
 
@@ -216,19 +216,19 @@ class _ProductsScreenState extends State<ProductsScreen> {
                               headingRowColor:
                                   WidgetStateProperty.all(Colors.grey.shade100),
                               columns: const [
-                                DataColumn(label: Text('ID')),
-                                DataColumn(label: Text('Name')),
-                                DataColumn(label: Text('Category')),
-                                DataColumn(label: Text('Purchase Price'), numeric: true),
-                                DataColumn(label: Text('Sale Price'), numeric: true),
-                                DataColumn(label: Text('Stock'), numeric: true),
-                                DataColumn(label: Text('Actions')),
+                                DataColumn(label: Text('ID', style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold))),
+                                DataColumn(label: Text('Name', style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold))),
+                                DataColumn(label: Text('Category', style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold))),
+                                DataColumn(label: Text('Purchase Price', style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold)), numeric: true),
+                                DataColumn(label: Text('Sale Price', style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold)), numeric: true),
+                                DataColumn(label: Text('Stock', style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold)), numeric: true),
+                                DataColumn(label: Text('Actions', style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold))),
                               ],
                               rows: items.map((p) {
                                 return DataRow(cells: [
                                   DataCell(Text('#${p.id}')),
                                   DataCell(Text(p.name)),
-                                  DataCell(Text(p.category ?? '—')),
+                                  DataCell(Text(p.category ?? '�')),
                                   DataCell(Text(p.purchasePrice.toStringAsFixed(2))),
                                   DataCell(Text(p.salePrice.toStringAsFixed(2))),
                                   DataCell(Text('${p.stockQty}')),

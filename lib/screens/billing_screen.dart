@@ -140,15 +140,17 @@ class _BillingScreenState extends State<BillingScreen> {
 
   Widget _paymentButton(String value, String label, IconData icon) {
     final selected = _paymentType == value;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final unselectedColor = isDark ? Colors.white70 : Colors.black87;
     return ChoiceChip(
       label: Row(mainAxisSize: MainAxisSize.min, children: [
-        Icon(icon, size: 16, color: selected ? Colors.white : Colors.black87),
+        Icon(icon, size: 16, color: selected ? Colors.white : unselectedColor),
         const SizedBox(width: 6),
         Text(label),
       ]),
       selected: selected,
       selectedColor: Colors.teal,
-      labelStyle: TextStyle(color: selected ? Colors.white : Colors.black87),
+      labelStyle: TextStyle(color: selected ? Colors.white : unselectedColor),
       onSelected: (_) => setState(() => _paymentType = value),
     );
   }
@@ -213,8 +215,12 @@ class _BillingScreenState extends State<BillingScreen> {
                               label: Text(cat),
                               selected: selected,
                               selectedColor: color,
-                              labelStyle:
-                                  TextStyle(color: selected ? Colors.white : Colors.black87),
+                              labelStyle: TextStyle(
+                                  color: selected
+                                      ? Colors.white
+                                      : Theme.of(context).brightness == Brightness.dark
+                                          ? Colors.white70
+                                          : Colors.black87),
                               onSelected: (_) => setState(() => _selectedCategory = cat),
                             );
                           },
@@ -254,7 +260,7 @@ class _BillingScreenState extends State<BillingScreen> {
                                             Text(p.name,
                                                 maxLines: 2,
                                                 overflow: TextOverflow.ellipsis,
-                                                style: const TextStyle(fontWeight: FontWeight.w600)),
+                                                style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.black87)),
                                             Text(p.salePrice.toStringAsFixed(0),
                                                 style: TextStyle(
                                                     color: Colors.teal.shade700,

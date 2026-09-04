@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../database/database.dart';
 
 class ReportsScreen extends StatefulWidget {
@@ -30,7 +30,11 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(label,
-                      style: const TextStyle(fontSize: 13, color: Colors.black54)),
+                      style: TextStyle(
+                          fontSize: 13,
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.white70
+                              : Colors.black54)),
                   const SizedBox(height: 4),
                   Text(value,
                       style: TextStyle(
@@ -121,7 +125,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                   backgroundColor: Colors.green.shade50,
                                   child: const Icon(Icons.arrow_upward, color: Colors.green),
                                 ),
-                                title: Text('Bill #${b.id} — ${b.customerName}'),
+                                title: Text('Bill #${b.id} � ${b.customerName}'),
                                 subtitle: Text('Date: $dateStr | Method: $method'),
                                 trailing: Column(
                                   crossAxisAlignment: CrossAxisAlignment.end,

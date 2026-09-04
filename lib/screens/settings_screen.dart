@@ -87,9 +87,13 @@ class SettingsScreen extends StatelessWidget {
                 title: 'Data & Backup',
                 icon: Icons.backup_outlined,
                 children: [
-                  const Text(
+                  Text(
                     'Your data lives entirely on this computer. Back it up regularly, especially before restoring an older file.',
-                    style: TextStyle(color: Colors.black54, fontSize: 13),
+                    style: TextStyle(
+                        fontSize: 13,
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.white70
+                            : Colors.black54),
                   ),
                   const SizedBox(height: 16),
                   Row(

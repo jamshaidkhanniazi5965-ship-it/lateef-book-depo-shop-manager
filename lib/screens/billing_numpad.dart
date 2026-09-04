@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 const String _timesSign = '\u00D7';
@@ -245,7 +245,7 @@ class _BillingNumpadState extends State<BillingNumpad> {
           child: Column(
             children: [
               const Text('Calculator',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.black87)),
               const SizedBox(height: 8),
               Container(
                 width: double.infinity,
@@ -307,7 +307,7 @@ class _BillingNumpadState extends State<BillingNumpad> {
                           onTap: () => _tapDigit('0'),
                           child: const Center(
                             child: Text('0',
-                                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+                                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.black87)),
                           ),
                         ),
                       ),

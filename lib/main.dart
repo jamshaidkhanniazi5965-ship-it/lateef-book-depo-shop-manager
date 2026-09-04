@@ -6,6 +6,11 @@ import 'screens/analytics_screen.dart';
 import 'screens/udhaar_screen.dart';
 import 'screens/settings_screen.dart';
 
+/// Global theme-mode switch. A top-level ValueNotifier keeps this simple -
+/// no extra state-management package needed just to flip light/dark.
+final ValueNotifier<ThemeMode> themeModeNotifier =
+    ValueNotifier(ThemeMode.light);
+
 void main() {
   runApp(const ShopApp());
 }
@@ -14,11 +19,26 @@ class ShopApp extends StatelessWidget {
   const ShopApp({super.key});
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Shop Manager',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(useMaterial3: true, colorSchemeSeed: Colors.teal),
-      home: const HomeScreen(),
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: themeModeNotifier,
+      builder: (context, mode, _) {
+        return MaterialApp(
+          title: 'Shop Manager',
+          debugShowCheckedModeBanner: false,
+          themeMode: mode,
+          theme: ThemeData(
+            useMaterial3: true,
+            colorSchemeSeed: Colors.teal,
+            brightness: Brightness.light,
+          ),
+          darkTheme: ThemeData(
+            useMaterial3: true,
+            colorSchemeSeed: Colors.teal,
+            brightness: Brightness.dark,
+          ),
+          home: const HomeScreen(),
+        );
+      },
     );
   }
 }
@@ -144,7 +164,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   height: 64,
                   padding: const EdgeInsets.symmetric(horizontal: 24),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: Theme.of(context).colorScheme.surface,
                     border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
                   ),
                   child: Row(
@@ -154,6 +174,24 @@ class _HomeScreenState extends State<HomeScreen> {
                         style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                       ),
                       const Spacer(),
+                      ValueListenableBuilder<ThemeMode>(
+                        valueListenable: themeModeNotifier,
+                        builder: (context, mode, _) {
+                          final isDark = mode == ThemeMode.dark;
+                          return IconButton(
+                            tooltip: isDark ? 'Switch to light mode' : 'Switch to dark mode',
+                            icon: Icon(
+                              isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
+                              color: isDark ? Colors.amber : Colors.indigo,
+                            ),
+                            onPressed: () {
+                              themeModeNotifier.value =
+                                  isDark ? ThemeMode.light : ThemeMode.dark;
+                            },
+                          );
+                        },
+                      ),
+                      const SizedBox(width: 12),
                       const Icon(Icons.person_outline, color: Colors.black54),
                       const SizedBox(width: 6),
                       const Text('Admin / Cashier',

@@ -1,4 +1,4 @@
-ï»¿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../database/database.dart';
 
 class UdhaarScreen extends StatefulWidget {
@@ -19,7 +19,7 @@ class _UdhaarScreenState extends State<UdhaarScreen> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: Text('Receive Payment â€” Bill #${bill.id}'),
+          title: Text('Receive Payment — Bill #${bill.id}'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -194,10 +194,10 @@ class _UdhaarScreenState extends State<UdhaarScreen> {
                     const SizedBox(height: 16),
                     Expanded(
                       child: pendingBills.isEmpty
-                          ? const Center(
+                          ? Center(
                               child: Text(
                                 'No pending Udhaar entries found.',
-                                style: TextStyle(color: Colors.black87),
+                                style: TextStyle(color: Theme.of(context).brightness == Brightness.dark ? Colors.white70 : Colors.black87),
                               ),
                             )
                           : ListView.separated(
@@ -250,15 +250,15 @@ class _UdhaarScreenState extends State<UdhaarScreen> {
                                           crossAxisAlignment:
                                               CrossAxisAlignment.end,
                                           children: [
-                                            const Text('Due',
+                                            Text('Due',
                                                 style: TextStyle(
                                                     fontSize: 10,
-                                                    color: Colors.black87)),
+                                                    color: Theme.of(context).brightness == Brightness.dark ? Colors.white70 : Colors.black87)),
                                             Text(
                                               'Rs. ${due.toStringAsFixed(0)}',
                                               style: TextStyle(
                                                   fontWeight: FontWeight.bold,
-                                                  color: Colors.black87,
+                                                  color: Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black87,
                                                   fontSize: 15),
                                             ),
                                           ],
@@ -284,8 +284,8 @@ class _UdhaarScreenState extends State<UdhaarScreen> {
                                           crossAxisAlignment:
                                               CrossAxisAlignment.start,
                                           children: [
-                                            const Text('Purchased Items:',
-                                                style: TextStyle(color: Colors.black87, 
+                                            Text('Purchased Items:',
+                                                style: TextStyle(color: Theme.of(context).brightness == Brightness.dark ? Colors.white70 : Colors.black87, 
                                                     fontWeight:
                                                         FontWeight.bold,
                                                     fontSize: 12)),
@@ -299,7 +299,7 @@ class _UdhaarScreenState extends State<UdhaarScreen> {
                                                             .spaceBetween,
                                                     children: [
                                                       Text(
-                                                          'â€¢ ${l.productName} (x${l.quantity})'),
+                                                          '• ${l.productName} (x${l.quantity})'),
                                                       Text(
                                                           'Rs. ${l.lineTotal.toStringAsFixed(2)}'),
                                                     ],
