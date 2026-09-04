@@ -130,6 +130,18 @@ class SettingsScreen extends StatelessWidget {
                     subtitle:
                         Text('All data is stored locally. No internet connection required.'),
                   ),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(Icons.person_outline, color: _accentColor),
+                    title: Text('Developer'),
+                    subtitle: Text('Jamshaid Niazi'),
+                  ),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(Icons.business_outlined, color: _accentColor),
+                    title: Text('Developed by'),
+                    subtitle: Text('Niazi Tech'),
+                  ),
                 ],
               ),
             ],
