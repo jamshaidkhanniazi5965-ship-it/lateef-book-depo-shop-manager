@@ -1,4 +1,4 @@
-import 'dart:convert';
+﻿import 'dart:convert';
 import 'dart:io';
 
 import 'package:drift/drift.dart' as drift;
@@ -9,19 +9,15 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 
 import '../database/database.dart';
-import '../main.dart';
 
 class ShopServices {
   /// Print a thermal-style receipt for a saved bill.
   static Future<void> printReceipt({
     required Bill bill,
-    required List<BillItem> items,
-    required List<Product> allProducts,
+    required List<CartLine> items,
   }) async {
     final doc = pw.Document();
-    final productMap = {for (final p in allProducts) p.id: p};
-    final customerName = await db.getCustomerName(bill.customerId);
-    final remaining = bill.total - bill.amountPaid;
+    final remaining = bill.totalAmount - bill.paidAmount;
 
     doc.addPage(
       pw.Page(
@@ -38,8 +34,8 @@ class ShopServices {
               pw.Center(child: pw.Text('Official Receipt', style: const pw.TextStyle(fontSize: 10))),
               pw.SizedBox(height: 8),
               pw.Text('Bill #: ${bill.id}', style: const pw.TextStyle(fontSize: 10)),
-              pw.Text('Customer: $customerName', style: const pw.TextStyle(fontSize: 10)),
-              pw.Text('Date: ${bill.date.toString().split(".")[0]}',
+              pw.Text('Customer: ${bill.customerName}', style: const pw.TextStyle(fontSize: 10)),
+              pw.Text('Date: ${bill.createdAt.toString().split(".")[0]}',
                   style: const pw.TextStyle(fontSize: 10)),
               pw.Text('Payment: ${bill.paymentType}', style: const pw.TextStyle(fontSize: 10)),
               pw.Divider(borderStyle: pw.BorderStyle.dashed),
@@ -62,16 +58,14 @@ class ShopServices {
               ),
               pw.SizedBox(height: 4),
               ...items.map((item) {
-                final name = productMap[item.productId]?.name ?? 'Unknown product';
-                final lineTotal = item.unitPrice * item.quantity;
                 return pw.Padding(
                   padding: const pw.EdgeInsets.symmetric(vertical: 2),
                   child: pw.Row(
                     mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                     children: [
-                      pw.Expanded(flex: 3, child: pw.Text(name, style: const pw.TextStyle(fontSize: 9))),
+                      pw.Expanded(flex: 3, child: pw.Text(item.productName, style: const pw.TextStyle(fontSize: 9))),
                       pw.Expanded(flex: 1, child: pw.Text('${item.quantity}', style: const pw.TextStyle(fontSize: 9))),
-                      pw.Expanded(flex: 2, child: pw.Text(lineTotal.toStringAsFixed(2), style: const pw.TextStyle(fontSize: 9))),
+                      pw.Expanded(flex: 2, child: pw.Text(item.lineTotal.toStringAsFixed(2), style: const pw.TextStyle(fontSize: 9))),
                     ],
                   ),
                 );
@@ -81,14 +75,14 @@ class ShopServices {
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
                   pw.Text('Total Amount:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10)),
-                  pw.Text('Rs. ${bill.total.toStringAsFixed(2)}', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10)),
+                  pw.Text('Rs. ${bill.totalAmount.toStringAsFixed(2)}', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10)),
                 ],
               ),
               pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
                   pw.Text('Paid:', style: const pw.TextStyle(fontSize: 9)),
-                  pw.Text('Rs. ${bill.amountPaid.toStringAsFixed(2)}', style: const pw.TextStyle(fontSize: 9)),
+                  pw.Text('Rs. ${bill.paidAmount.toStringAsFixed(2)}', style: const pw.TextStyle(fontSize: 9)),
                 ],
               ),
               if (remaining > 0)
@@ -115,16 +109,14 @@ class ShopServices {
     try {
       final products = await db.select(db.products).get();
       final bills = await db.select(db.bills).get();
-      final items = await db.select(db.billItems).get();
-      final customers = await db.select(db.customers).get();
+      final lines = await db.select(db.billLines).get();
 
       final backupData = {
-        'version': 2,
+        'version': 3,
         'timestamp': DateTime.now().toIso8601String(),
         'products': products.map((p) => p.toJson()).toList(),
-        'customers': customers.map((c) => c.toJson()).toList(),
         'bills': bills.map((b) => b.toJson()).toList(),
-        'billItems': items.map((i) => i.toJson()).toList(),
+        'billLines': lines.map((l) => l.toJson()).toList(),
       };
 
       final jsonString = const JsonEncoder.withIndent('  ').convert(backupData);
@@ -135,10 +127,6 @@ class ShopServices {
         bytes: utf8.encode(jsonString),
       );
 
-      // On Windows, saveFile writes the file itself when `bytes` is given
-      // and returns the chosen path; on some platforms it may return a
-      // path without writing, so we write defensively if the file doesn't
-      // exist yet.
       if (outputPath != null) {
         final file = File(outputPath);
         if (!await file.exists()) {
@@ -177,22 +165,9 @@ class ShopServices {
       final Map<String, dynamic> data = jsonDecode(jsonString);
 
       await db.transaction(() async {
-        await db.delete(db.billItems).go();
+        await db.delete(db.billLines).go();
         await db.delete(db.bills).go();
         await db.delete(db.products).go();
-        await db.delete(db.customers).go();
-
-        for (final c in (data['customers'] as List? ?? [])) {
-          await db.into(db.customers).insert(
-                CustomersCompanion.insert(
-                  id: drift.Value(c['id']),
-                  name: c['name'],
-                  phone: drift.Value(c['phone']),
-                  creditBalance: drift.Value((c['creditBalance'] as num).toDouble()),
-                ),
-                mode: drift.InsertMode.insertOrReplace,
-              );
-        }
 
         for (final p in (data['products'] as List? ?? [])) {
           await db.into(db.products).insert(
@@ -201,9 +176,9 @@ class ShopServices {
                   name: p['name'],
                   category: drift.Value(p['category']),
                   barcode: drift.Value(p['barcode']),
-                  costPrice: drift.Value((p['costPrice'] as num).toDouble()),
-                  salePrice: drift.Value((p['salePrice'] as num).toDouble()),
-                  stockQty: drift.Value(p['stockQty']),
+                  purchasePrice: (p['purchasePrice'] as num).toDouble(),
+                  salePrice: (p['salePrice'] as num).toDouble(),
+                  stockQty: p['stockQty'],
                 ),
                 mode: drift.InsertMode.insertOrReplace,
               );
@@ -213,24 +188,29 @@ class ShopServices {
           await db.into(db.bills).insert(
                 BillsCompanion.insert(
                   id: drift.Value(b['id']),
-                  customerId: drift.Value(b['customerId']),
-                  date: drift.Value(DateTime.parse(b['date'])),
-                  total: (b['total'] as num).toDouble(),
-                  amountPaid: drift.Value((b['amountPaid'] as num).toDouble()),
+                  customerName: b['customerName'],
+                  totalAmount: drift.Value((b['totalAmount'] as num).toDouble()),
+                  paidAmount: drift.Value((b['paidAmount'] as num).toDouble()),
+                  remainingAmount: drift.Value((b['remainingAmount'] as num).toDouble()),
+                  paymentMethod: drift.Value(b['paymentMethod']),
                   paymentType: drift.Value(b['paymentType']),
+                  isCleared: drift.Value(b['isCleared']),
+                  createdAt: drift.Value(DateTime.parse(b['createdAt'])),
                 ),
                 mode: drift.InsertMode.insertOrReplace,
               );
         }
 
-        for (final i in (data['billItems'] as List? ?? [])) {
-          await db.into(db.billItems).insert(
-                BillItemsCompanion.insert(
-                  id: drift.Value(i['id']),
-                  billId: i['billId'],
-                  productId: i['productId'],
-                  quantity: i['quantity'],
-                  unitPrice: (i['unitPrice'] as num).toDouble(),
+        for (final l in (data['billLines'] as List? ?? [])) {
+          await db.into(db.billLines).insert(
+                BillLinesCompanion.insert(
+                  id: drift.Value(l['id']),
+                  billId: l['billId'],
+                  productId: l['productId'],
+                  productName: drift.Value(l['productName']),
+                  quantity: l['quantity'],
+                  unitPrice: drift.Value((l['unitPrice'] as num).toDouble()),
+                  lineTotal: (l['lineTotal'] as num).toDouble(),
                 ),
                 mode: drift.InsertMode.insertOrReplace,
               );

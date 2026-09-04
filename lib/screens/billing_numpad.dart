@@ -1,15 +1,17 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
-const List<Color> _keyColors = [
-  Color(0xFF5C6BC0), // indigo
-  Color(0xFF26A69A), // teal
-  Color(0xFFEF5350), // red
-  Color(0xFFFFA726), // orange
-];
+const String _timesSign = '\u00D7';
+const String _divideSign = '\u00F7';
 
-/// A self-contained calculator. Not wired to cart pricing — it's a handy
-/// side tool for the shop owner to do quick math while billing (e.g.
-/// working out a discount or change due) without switching apps.
+const Color _clearColor = Color(0xFFEF5350);
+const Color _opColor = Color(0xFFFFA726);
+const Color _equalsColor = Color(0xFF17A398);
+
+/// A self-contained calculator. Not wired to cart pricing - it's a handy
+/// side tool for the shop owner to do quick math while billing.
+/// Supports keyboard input: digits, . , + or = , - , * (Shift+8) for
+/// multiply, / for divide, Enter for result, Backspace to delete a digit.
 class BillingNumpad extends StatefulWidget {
   const BillingNumpad({super.key});
 
@@ -18,12 +20,20 @@ class BillingNumpad extends StatefulWidget {
 }
 
 class _BillingNumpadState extends State<BillingNumpad> {
-  String _expressionPrefix = ''; // e.g. "5+5+"
+  final FocusNode _focusNode = FocusNode();
+
+  String _expressionPrefix = '';
   String _currentNumberStr = '0';
   double? _pendingValue;
   String? _pendingOp;
   bool _justEvaluated = false;
   String _resultText = '0';
+
+  @override
+  void dispose() {
+    _focusNode.dispose();
+    super.dispose();
+  }
 
   String get _displayText {
     if (_justEvaluated) return _resultText;
@@ -44,6 +54,20 @@ class _BillingNumpadState extends State<BillingNumpad> {
       } else {
         _currentNumberStr += digit;
       }
+    });
+  }
+
+  void _tapBackspace() {
+    setState(() {
+      if (_justEvaluated) {
+        _tapClear();
+        return;
+      }
+      if (_currentNumberStr.isNotEmpty) {
+        _currentNumberStr =
+            _currentNumberStr.substring(0, _currentNumberStr.length - 1);
+      }
+      if (_currentNumberStr.isEmpty) _currentNumberStr = '0';
     });
   }
 
@@ -70,9 +94,9 @@ class _BillingNumpadState extends State<BillingNumpad> {
         return _pendingValue! + current;
       case '-':
         return _pendingValue! - current;
-      case '×':
+      case _timesSign:
         return _pendingValue! * current;
-      case '÷':
+      case _divideSign:
         return current == 0 ? 0 : _pendingValue! / current;
       default:
         return current;
@@ -83,7 +107,6 @@ class _BillingNumpadState extends State<BillingNumpad> {
     setState(() {
       final current = double.tryParse(_currentNumberStr) ?? 0;
       if (_pendingOp != null && !_justEvaluated) {
-        // Chain operations: 5+5+ means evaluate 5+5 first, keep going.
         final result = _applyPending(current);
         _pendingValue = result;
         _expressionPrefix = '${_formatNumber(result)}$op';
@@ -126,27 +149,76 @@ class _BillingNumpadState extends State<BillingNumpad> {
     return value.toStringAsFixed(2);
   }
 
-  Widget _key(String label, {Color? color, VoidCallback? onTap}) {
+  KeyEventResult _handleKey(FocusNode node, KeyEvent event) {
+    if (event is! KeyDownEvent) return KeyEventResult.ignored;
+
+    final key = event.logicalKey;
+    if (key == LogicalKeyboardKey.enter || key == LogicalKeyboardKey.numpadEnter) {
+      _tapEquals();
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.escape) {
+      _tapClear();
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.backspace) {
+      _tapBackspace();
+      return KeyEventResult.handled;
+    }
+
+    final char = event.character;
+    if (char == null) return KeyEventResult.ignored;
+
+    if (RegExp(r'^[0-9]$').hasMatch(char)) {
+      _tapDigit(char);
+      return KeyEventResult.handled;
+    }
+    if (char == '.') {
+      _tapDot();
+      return KeyEventResult.handled;
+    }
+    if (char == '+' || char == '=') {
+      _tapOperator('+');
+      return KeyEventResult.handled;
+    }
+    if (char == '-') {
+      _tapOperator('-');
+      return KeyEventResult.handled;
+    }
+    if (char == '*') {
+      _tapOperator(_timesSign);
+      return KeyEventResult.handled;
+    }
+    if (char == '/') {
+      _tapOperator(_divideSign);
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
+  }
+
+  Widget _key(String label, {Color? color, VoidCallback? onTap, Widget? child}) {
     return Expanded(
       child: Padding(
         padding: const EdgeInsets.all(4),
         child: AspectRatio(
-          aspectRatio: 1.3,
+          aspectRatio: 1.25,
           child: Material(
-            color: color ?? Colors.grey.shade200,
-            borderRadius: BorderRadius.circular(10),
+            color: color ?? Colors.grey.shade100,
+            borderRadius: BorderRadius.circular(12),
+            elevation: color != null ? 1.5 : 0,
             child: InkWell(
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(12),
               onTap: onTap ?? () => _tapDigit(label),
               child: Center(
-                child: Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: color != null ? Colors.white : Colors.black87,
-                  ),
-                ),
+                child: child ??
+                    Text(
+                      label,
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        color: color != null ? Colors.white : Colors.black87,
+                      ),
+                    ),
               ),
             ),
           ),
@@ -157,82 +229,97 @@ class _BillingNumpadState extends State<BillingNumpad> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 260,
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade50,
-        border: Border(left: BorderSide(color: Colors.grey.shade300)),
-      ),
-      child: Column(
-        children: [
-          const Text('Calculator',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-          const SizedBox(height: 8),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.black87,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Align(
-              alignment: Alignment.centerRight,
-              child: Text(
-                _displayText,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 24,
-                  fontWeight: FontWeight.w500,
-                ),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
+    return Focus(
+      focusNode: _focusNode,
+      autofocus: true,
+      onKeyEvent: _handleKey,
+      child: GestureDetector(
+        onTap: () => _focusNode.requestFocus(),
+        child: Container(
+          width: 260,
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.grey.shade50,
+            border: Border(left: BorderSide(color: Colors.grey.shade300)),
           ),
-          const SizedBox(height: 12),
-          Row(children: [
-            _key('C', color: _keyColors[2], onTap: _tapClear),
-            _key('÷', color: _keyColors[0], onTap: () => _tapOperator('÷')),
-            _key('×', color: _keyColors[0], onTap: () => _tapOperator('×')),
-            _key('-', color: _keyColors[0], onTap: () => _tapOperator('-')),
-          ]),
-          Row(children: [
-            _key('7'),
-            _key('8'),
-            _key('9'),
-            _key('+', color: _keyColors[0], onTap: () => _tapOperator('+')),
-          ]),
-          Row(children: [_key('4'), _key('5'), _key('6'), _key('.', onTap: _tapDot)]),
-          Row(children: [
-            _key('1'),
-            _key('2'),
-            _key('3'),
-            _key('=', color: _keyColors[3], onTap: _tapEquals),
-          ]),
-          Row(children: [
-            Expanded(
-              flex: 3,
-              child: Padding(
-                padding: const EdgeInsets.all(4),
-                child: AspectRatio(
-                  aspectRatio: 4,
-                  child: Material(
-                    color: Colors.grey.shade200,
-                    borderRadius: BorderRadius.circular(10),
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(10),
-                      onTap: () => _tapDigit('0'),
-                      child: const Center(
-                        child: Text('0',
-                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+          child: Column(
+            children: [
+              const Text('Calculator',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+              const SizedBox(height: 8),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF14213D),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: Text(
+                    _displayText,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 24,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Row(children: [
+                _key('C', color: _clearColor, onTap: _tapClear),
+                _key('', color: Colors.grey.shade300, onTap: _tapBackspace,
+                    child: const Icon(Icons.backspace_outlined, color: Colors.black54, size: 20)),
+                _key('+', color: _opColor, onTap: () => _tapOperator('+')),
+              ]),
+              Row(children: [
+                _key('7'),
+                _key('8'),
+                _key('9'),
+                _key(_divideSign, color: _opColor, onTap: () => _tapOperator(_divideSign)),
+              ]),
+              Row(children: [
+                _key('4'),
+                _key('5'),
+                _key('6'),
+                _key(_timesSign, color: _opColor, onTap: () => _tapOperator(_timesSign)),
+              ]),
+              Row(children: [
+                _key('1'),
+                _key('2'),
+                _key('3'),
+                _key('-', color: _opColor, onTap: () => _tapOperator('-')),
+              ]),
+              Row(children: [
+                Expanded(
+                  flex: 2,
+                  child: Padding(
+                    padding: const EdgeInsets.all(4),
+                    child: AspectRatio(
+                      aspectRatio: 2.7,
+                      child: Material(
+                        color: Colors.grey.shade100,
+                        borderRadius: BorderRadius.circular(12),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(12),
+                          onTap: () => _tapDigit('0'),
+                          child: const Center(
+                            child: Text('0',
+                                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+                          ),
+                        ),
                       ),
                     ),
                   ),
                 ),
-              ),
-            ),
-          ]),
-        ],
+                _key('.', onTap: _tapDot),
+                _key('=', color: _equalsColor, onTap: _tapEquals),
+              ]),
+            ],
+          ),
+        ),
       ),
     );
   }

@@ -1,65 +1,50 @@
-import 'dart:io';
-
+﻿import 'dart:io';
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
-import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as p;
 
 part 'database.g.dart';
 
-// ---------------------------------------------------------------------------
-// TABLES
-// ---------------------------------------------------------------------------
-
 class Products extends Table {
   IntColumn get id => integer().autoIncrement()();
-  TextColumn get name => text().withLength(min: 1, max: 100)();
-  TextColumn get category => text().nullable()();
+  TextColumn get name => text()();
   TextColumn get barcode => text().nullable()();
-  RealColumn get costPrice => real().withDefault(const Constant(0))();
-  RealColumn get salePrice => real().withDefault(const Constant(0))();
-  IntColumn get stockQty => integer().withDefault(const Constant(0))();
-  IntColumn get lowStockThreshold => integer().withDefault(const Constant(5))();
-}
-
-class Customers extends Table {
-  IntColumn get id => integer().autoIncrement()();
-  TextColumn get name => text().withLength(min: 1, max: 100)();
-  TextColumn get phone => text().nullable()();
-  // Positive balance = customer owes the shop (udhaar / credit).
-  RealColumn get creditBalance => real().withDefault(const Constant(0))();
+  RealColumn get purchasePrice => real()();
+  RealColumn get salePrice => real()();
+  IntColumn get stockQty => integer()();
+  TextColumn get category => text().nullable()();
 }
 
 class Bills extends Table {
   IntColumn get id => integer().autoIncrement()();
-  IntColumn get customerId =>
-      integer().nullable().references(Customers, #id)();
-  DateTimeColumn get date => dateTime().withDefault(currentDateAndTime)();
-  RealColumn get total => real()();
-  // How much of `total` has actually been collected. For a cash sale this
-  // equals `total`. For a credit (udhaar) sale it can be 0 or a partial
-  // amount; `total - amountPaid` is what the customer still owes.
-  RealColumn get amountPaid => real().withDefault(const Constant(0))();
-  // 'cash' or 'credit'
-  TextColumn get paymentType => text().withDefault(const Constant('cash'))();
+  TextColumn get customerName => text()();
+  RealColumn get totalAmount => real().withDefault(const Constant(0.0))();
+  RealColumn get paidAmount => real().withDefault(const Constant(0.0))();
+  RealColumn get remainingAmount => real().withDefault(const Constant(0.0))();
+  TextColumn get paymentMethod => text().withDefault(const Constant('CASH'))();
+  TextColumn get paymentType => text().withDefault(const Constant('CASH'))();
+  BoolColumn get isCleared => boolean().withDefault(const Constant(true))();
+  DateTimeColumn get createdAt => dateTime().clientDefault(() => DateTime.now())();
 }
 
-class BillItems extends Table {
+class BillLines extends Table {
   IntColumn get id => integer().autoIncrement()();
-  IntColumn get billId => integer().references(Bills, #id)();
-  IntColumn get productId => integer().references(Products, #id)();
+  IntColumn get billId => integer().references(Bills, #id, onDelete: KeyAction.cascade)();
+  IntColumn get productId => integer().references(Products, #id, onDelete: KeyAction.restrict)();
+  TextColumn get productName => text().withDefault(const Constant(''))();
   IntColumn get quantity => integer()();
-  RealColumn get unitPrice => real()();
+  RealColumn get unitPrice => real().withDefault(const Constant(0.0))();
+  RealColumn get lineTotal => real()();
 }
 
-// A single item the billing screen is building up before it's saved.
-class BillLine {
+class CartLine {
   final int productId;
   final String productName;
   final int quantity;
   final double unitPrice;
 
-  const BillLine({
+  const CartLine({
     required this.productId,
     required this.productName,
     required this.quantity,
@@ -69,199 +54,123 @@ class BillLine {
   double get lineTotal => quantity * unitPrice;
 }
 
-// ---------------------------------------------------------------------------
-// DATABASE
-// ---------------------------------------------------------------------------
-
-@DriftDatabase(tables: [Products, Customers, Bills, BillItems])
+@DriftDatabase(tables: [Products, Bills, BillLines])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
-        onCreate: (m) => m.createAll(),
-        onUpgrade: (m, from, to) async {
-          if (from < 2) {
-            await m.addColumn(products, products.barcode);
-            await m.addColumn(bills, bills.amountPaid);
-          }
+        onCreate: (Migrator m) async {
+          await m.createAll();
+        },
+        onUpgrade: (Migrator m, int from, int to) async {
+          await m.createAll();
         },
       );
 
-  // ---- Products ---------------------------------------------------------
+  Stream<List<Product>> watchAllProducts() => select(products).watch();
 
   Future<List<Product>> getAllProducts() => select(products).get();
 
-  Stream<List<Product>> watchAllProducts() => select(products).watch();
+  Future<int> addProduct(ProductsCompanion entry) => into(products).insert(entry);
 
-  Future<List<Product>> getLowStockProducts() {
-    return (select(products)
-          ..where((p) => p.stockQty.isSmallerOrEqual(p.lowStockThreshold)))
-        .get();
-  }
-
-  Future<int> addProduct(ProductsCompanion product) =>
-      into(products).insert(product);
-
-  Future<bool> updateProduct(Product product) =>
-      update(products).replace(product);
+  Future<bool> updateProduct(Product product) => update(products).replace(product);
 
   Future<int> deleteProduct(int id) =>
-      (delete(products)..where((p) => p.id.equals(id))).go();
-
-  // ---- Customers ----------------------------------------------------------
-
-  Future<List<Customer>> getAllCustomers() => select(customers).get();
-
-  Future<int> addCustomer(CustomersCompanion customer) =>
-      into(customers).insert(customer);
-
-  // ---- Billing: THE critical atomic operation ----------------------------
-  //
-  // Saving a bill must never leave stock counts wrong if something fails
-  // partway through, so everything below runs inside one transaction.
-  // If any step throws, drift rolls back the entire thing automatically.
+      (delete(products)..where((tbl) => tbl.id.equals(id))).go();
 
   Future<int> saveBill({
-    required List<BillLine> items,
-    int? customerId,
-    String paymentType = 'cash',
-    double? amountPaid,
+    required List<CartLine> items,
+    required String paymentType,
+    required String customerName,
+    required double paidAmount,
   }) async {
-    final total = items.fold<double>(0, (sum, line) => sum + line.lineTotal);
-    // Cash sales are fully paid by definition. Credit sales default to
-    // fully unpaid (0) unless the shop owner records a partial payment
-    // at time of sale.
-    final paid = paymentType == 'cash' ? total : (amountPaid ?? 0);
-
     return transaction(() async {
-      // 1. Create the bill header.
-      final billId = await into(bills).insert(
-        BillsCompanion.insert(
-          total: total,
-          customerId: Value(customerId),
-          paymentType: Value(paymentType),
-          amountPaid: Value(paid),
-        ),
-      );
+      final totalAmount = items.fold<double>(0, (sum, l) => sum + l.lineTotal);
+      final remainingAmount = totalAmount - paidAmount;
+      final isCleared = remainingAmount <= 0.01;
 
-      // 2. Insert each line item and deduct stock.
-      for (final line in items) {
-        await into(billItems).insert(
-          BillItemsCompanion.insert(
-            billId: billId,
-            productId: line.productId,
-            quantity: line.quantity,
-            unitPrice: line.unitPrice,
-          ),
-        );
+      final billId = await into(bills).insert(BillsCompanion(
+        customerName: Value(customerName),
+        totalAmount: Value(totalAmount),
+        paidAmount: Value(paidAmount),
+        remainingAmount: Value(remainingAmount < 0 ? 0 : remainingAmount),
+        paymentType: Value(paymentType),
+        paymentMethod: Value(paymentType),
+        isCleared: Value(isCleared),
+      ));
 
-        final product = await (select(products)
-              ..where((p) => p.id.equals(line.productId)))
-            .getSingle();
-
-        final newStock = product.stockQty - line.quantity;
-        if (newStock < 0) {
-          // Throwing here rolls back the whole transaction, including
-          // the bill and item rows already inserted above.
-          throw StateError(
-            'Not enough stock for "${product.name}" '
-            '(have ${product.stockQty}, need ${line.quantity})',
-          );
-        }
-
-        await (update(products)..where((p) => p.id.equals(line.productId)))
-            .write(ProductsCompanion(stockQty: Value(newStock)));
-      }
-
-      // 3. If sold on credit, add the unpaid portion to the customer's balance.
-      final unpaid = total - paid;
-      if (unpaid > 0 && customerId != null) {
-        final customer = await (select(customers)
-              ..where((c) => c.id.equals(customerId)))
-            .getSingle();
-
-        await (update(customers)..where((c) => c.id.equals(customerId)))
-            .write(CustomersCompanion(
-          creditBalance: Value(customer.creditBalance + unpaid),
+      for (final item in items) {
+        await into(billLines).insert(BillLinesCompanion(
+          billId: Value(billId),
+          productId: Value(item.productId),
+          productName: Value(item.productName),
+          quantity: Value(item.quantity),
+          unitPrice: Value(item.unitPrice),
+          lineTotal: Value(item.lineTotal),
         ));
+
+        final product =
+            await (select(products)..where((p) => p.id.equals(item.productId))).getSingle();
+        final newStock = product.stockQty - item.quantity;
+
+        await (update(products)..where((p) => p.id.equals(item.productId))).write(
+          ProductsCompanion(stockQty: Value(newStock < 0 ? 0 : newStock)),
+        );
       }
 
       return billId;
     });
   }
 
-  Future<String> getCustomerName(int? customerId) async {
-    if (customerId == null) return 'Walk-in customer';
-    final customer = await (select(customers)
-          ..where((c) => c.id.equals(customerId)))
-        .getSingleOrNull();
-    return customer?.name ?? 'Walk-in customer';
+  Stream<List<Bill>> watchUdharBills() {
+    return (select(bills)
+          ..where((tbl) => tbl.remainingAmount.isBiggerThanValue(0.0))
+          ..orderBy([(tbl) => OrderingTerm.desc(tbl.createdAt)]))
+        .watch();
   }
 
-  Future<Product?> findProductByBarcode(String barcode) {
-    return (select(products)..where((p) => p.barcode.equals(barcode)))
-        .getSingleOrNull();
+  Future<void> recordPartialPayment(
+      int billId, double newTotalPaid, bool isFullyCleared) async {
+    final bill = await (select(bills)..where((b) => b.id.equals(billId))).getSingle();
+    final newRemaining = bill.totalAmount - newTotalPaid;
+
+    await (update(bills)..where((b) => b.id.equals(billId))).write(
+      BillsCompanion(
+        paidAmount: Value(newTotalPaid),
+        remainingAmount: Value(newRemaining < 0 ? 0 : newRemaining),
+        isCleared: Value(isFullyCleared),
+      ),
+    );
   }
 
-  // ---- Reports ------------------------------------------------------------
+  Future<List<Bill>> getAllBills() =>
+      (select(bills)..orderBy([(b) => OrderingTerm.desc(b.createdAt)])).get();
 
-  Future<double> getSalesTotalBetween(DateTime start, DateTime end) async {
-    final query = selectOnly(bills)
-      ..addColumns([bills.total.sum()])
-      ..where(bills.date.isBetweenValues(start, end));
-    final row = await query.getSingle();
-    return row.read(bills.total.sum()) ?? 0;
-  }
-
-  Future<List<Bill>> getBillsBetween(DateTime start, DateTime end) {
-    return (select(bills)..where((b) => b.date.isBetweenValues(start, end)))
-        .get();
-  }
-
-  Future<int> getProductCount() async {
-    final query = selectOnly(products)..addColumns([products.id.count()]);
-    final row = await query.getSingle();
-    return row.read(products.id.count()) ?? 0;
-  }
-
-  Future<int> getLowStockCount() async {
-    final rows = await getLowStockProducts();
-    return rows.length;
-  }
-
-  /// Profit = (unit_price - product.cost_price) * quantity, summed across
-  /// every bill_item belonging to a bill in the given date range.
-  Future<double> getProfitBetween(DateTime start, DateTime end) async {
-    final query = select(billItems).join([
-      innerJoin(bills, bills.id.equalsExp(billItems.billId)),
-      innerJoin(products, products.id.equalsExp(billItems.productId)),
-    ])
-      ..where(bills.date.isBetweenValues(start, end));
-
-    final rows = await query.get();
-    double profit = 0;
-    for (final row in rows) {
-      final item = row.readTable(billItems);
-      final product = row.readTable(products);
-      profit += (item.unitPrice - product.costPrice) * item.quantity;
-    }
-    return profit;
+  Future<List<CartLine>> getBillLinesForBill(int billId) async {
+    final rows = await (select(billLines)..where((l) => l.billId.equals(billId))).get();
+    return rows
+        .map((r) => CartLine(
+              productId: r.productId,
+              productName: r.productName,
+              quantity: r.quantity,
+              unitPrice: r.unitPrice,
+            ))
+        .toList();
   }
 }
-
-// ---------------------------------------------------------------------------
-// Connection: a plain file on disk in the user's app-data folder.
-// This is what makes the whole app work with zero internet connection.
-// ---------------------------------------------------------------------------
 
 LazyDatabase _openConnection() {
   return LazyDatabase(() async {
-    final dbFolder = await getApplicationSupportDirectory();
-    final file = File(p.join(dbFolder.path, 'shop_data.sqlite'));
+    final dbFolder = await getApplicationDocumentsDirectory();
+    final file = File(p.join(dbFolder.path, 'shop_management.sqlite'));
     return NativeDatabase.createInBackground(file);
   });
 }
+
+final db = AppDatabase();
+
+

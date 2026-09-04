@@ -1,13 +1,9 @@
-import 'package:flutter/material.dart';
-
-import 'database/database.dart';
+﻿import 'package:flutter/material.dart';
 import 'screens/products_screen.dart';
 import 'screens/billing_screen.dart';
 import 'screens/reports_screen.dart';
 import 'screens/analytics_screen.dart';
-
-// One database instance, shared across the whole app.
-final AppDatabase db = AppDatabase();
+import 'screens/udhaar_screen.dart';
 
 void main() {
   runApp(const ShopApp());
@@ -15,7 +11,6 @@ void main() {
 
 class ShopApp extends StatelessWidget {
   const ShopApp({super.key});
-
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -27,19 +22,36 @@ class ShopApp extends StatelessWidget {
   }
 }
 
+const Color _sidebarColor = Color(0xFF0F1B2D);
+const Color _accentColor = Color(0xFF17A398);
+
+class _NavItem {
+  final IconData icon;
+  final String label;
+  final String pageTitle;
+  const _NavItem(this.icon, this.label, this.pageTitle);
+}
+
+const List<_NavItem> _navItems = [
+  _NavItem(Icons.point_of_sale, 'Billing', 'Billing & Checkout'),
+  _NavItem(Icons.inventory_2_outlined, 'Products', 'Inventory & Products'),
+  _NavItem(Icons.menu_book_outlined, 'Udhaar Book', 'Udhaar Book'),
+  _NavItem(Icons.bar_chart, 'Reports', 'Reports & Profit Analytics'),
+  _NavItem(Icons.insights, 'Analytics', 'Sales Progress & Analytics'),
+];
+
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
-
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends State<HomeScreen> {
   int _index = 0;
-
   static const _screens = [
     BillingScreen(),
     ProductsScreen(),
+    UdhaarScreen(),
     ReportsScreen(),
     AnalyticsScreen(),
   ];
@@ -49,31 +61,107 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       body: Row(
         children: [
-          NavigationRail(
-            selectedIndex: _index,
-            onDestinationSelected: (i) => setState(() => _index = i),
-            labelType: NavigationRailLabelType.all,
-            destinations: const [
-              NavigationRailDestination(
-                icon: Icon(Icons.point_of_sale),
-                label: Text('Billing'),
-              ),
-              NavigationRailDestination(
-                icon: Icon(Icons.inventory_2),
-                label: Text('Products'),
-              ),
-              NavigationRailDestination(
-                icon: Icon(Icons.bar_chart),
-                label: Text('Reports'),
-              ),
-              NavigationRailDestination(
-                icon: Icon(Icons.insights),
-                label: Text('Analytics'),
-              ),
-            ],
+          Container(
+            width: 220,
+            color: _sidebarColor,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 28),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: _accentColor,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(Icons.storefront, color: Colors.white, size: 20),
+                      ),
+                      const SizedBox(width: 12),
+                      const Expanded(
+                        child: Text(
+                          'Shop Manager',
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 17,
+                              fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 32),
+                for (int i = 0; i < _navItems.length; i++)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    child: Material(
+                      color: i == _index ? _accentColor : Colors.transparent,
+                      borderRadius: BorderRadius.circular(10),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(10),
+                        onTap: () => setState(() => _index = i),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                          child: Row(
+                            children: [
+                              Icon(_navItems[i].icon,
+                                  color: Colors.white, size: 20),
+                              const SizedBox(width: 14),
+                              Text(
+                                _navItems[i].label,
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 14,
+                                  fontWeight:
+                                      i == _index ? FontWeight.bold : FontWeight.normal,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                const Spacer(),
+                const Padding(
+                  padding: EdgeInsets.all(16),
+                  child: Text('v1.0.0 - Desktop Edition',
+                      style: TextStyle(color: Colors.white38, fontSize: 11)),
+                ),
+              ],
+            ),
           ),
-          const VerticalDivider(width: 1),
-          Expanded(child: _screens[_index]),
+          Expanded(
+            child: Column(
+              children: [
+                Container(
+                  height: 64,
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
+                  ),
+                  child: Row(
+                    children: [
+                      Text(
+                        _navItems[_index].pageTitle,
+                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                      ),
+                      const Spacer(),
+                      const Icon(Icons.person_outline, color: Colors.black54),
+                      const SizedBox(width: 6),
+                      const Text('Admin / Cashier',
+                          style: TextStyle(fontWeight: FontWeight.w500)),
+                    ],
+                  ),
+                ),
+                Expanded(child: _screens[_index]),
+              ],
+            ),
+          ),
         ],
       ),
     );

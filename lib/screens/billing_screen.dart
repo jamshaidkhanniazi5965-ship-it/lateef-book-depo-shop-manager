@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-
 import '../database/database.dart';
-import '../main.dart';
 import '../services/shop_services.dart';
 import 'billing_numpad.dart';
 
@@ -11,7 +9,6 @@ const List<Color> _categoryPalette = [
   Color(0xFFEF5350),
   Color(0xFFFFA726),
   Color(0xFF8D6E63),
-  Color(0xFF7E57C2),
 ];
 
 class BillingScreen extends StatefulWidget {
@@ -22,34 +19,35 @@ class BillingScreen extends StatefulWidget {
 }
 
 class _BillingScreenState extends State<BillingScreen> {
-  final List<BillLine> _lines = [];
-  String _search = '';
+  final List<CartLine> _lines = [];
+  final _searchController = TextEditingController();
+  final _customerController = TextEditingController();
+  final _paidAmountController = TextEditingController();
   String _selectedCategory = 'All';
   String _paymentType = 'cash';
   bool _saving = false;
 
   double get _total => _lines.fold(0, (sum, l) => sum + l.lineTotal);
 
-  void _addProduct(Product product) {
-    if (product.stockQty <= 0) return;
+  void _addProduct(Product p) {
+    if (p.stockQty <= 0) return;
     setState(() {
-      final existingIndex =
-          _lines.indexWhere((l) => l.productId == product.id);
-      if (existingIndex != -1) {
-        final existing = _lines[existingIndex];
-        if (existing.quantity + 1 > product.stockQty) return;
-        _lines[existingIndex] = BillLine(
+      final i = _lines.indexWhere((l) => l.productId == p.id);
+      if (i != -1) {
+        final existing = _lines[i];
+        if (existing.quantity + 1 > p.stockQty) return;
+        _lines[i] = CartLine(
           productId: existing.productId,
           productName: existing.productName,
           quantity: existing.quantity + 1,
           unitPrice: existing.unitPrice,
         );
       } else {
-        _lines.add(BillLine(
-          productId: product.id,
-          productName: product.name,
+        _lines.add(CartLine(
+          productId: p.id,
+          productName: p.name,
           quantity: 1,
-          unitPrice: product.salePrice,
+          unitPrice: p.salePrice,
         ));
       }
     });
@@ -64,7 +62,7 @@ class _BillingScreenState extends State<BillingScreen> {
         return;
       }
       if (newQty > stockQty) return;
-      _lines[index] = BillLine(
+      _lines[index] = CartLine(
         productId: l.productId,
         productName: l.productName,
         quantity: newQty,
@@ -75,58 +73,84 @@ class _BillingScreenState extends State<BillingScreen> {
 
   void _removeLine(int index) => setState(() => _lines.removeAt(index));
 
-  Future<void> _saveBill(List<Product> allProducts) async {
+  Future<void> _saveBill({required bool shouldPrint}) async {
     if (_lines.isEmpty || _saving) return;
     setState(() => _saving = true);
+
+    final custName = _customerController.text.trim().isEmpty
+        ? 'Walk-in Customer'
+        : _customerController.text.trim();
+
+    double paidUpfront;
+    if (_paymentType == 'partial') {
+      paidUpfront = double.tryParse(_paidAmountController.text.trim()) ?? 0.0;
+    } else if (_paymentType == 'credit') {
+      paidUpfront = 0.0;
+    } else {
+      paidUpfront = _total;
+    }
+
+    // Keep a copy for the receipt before we clear the cart below.
+    final savedLines = List<CartLine>.from(_lines);
+
     try {
       final billId = await db.saveBill(
         items: _lines,
         paymentType: _paymentType,
+        customerName: custName,
+        paidAmount: paidUpfront,
       );
-      final savedLines = List<BillLine>.from(_lines);
-
       setState(() {
         _lines.clear();
+        _customerController.clear();
+        _paidAmountController.clear();
+        _paymentType = 'cash';
         _saving = false;
       });
-
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Bill saved.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Bill #$billId saved for $custName.')),
+      );
 
-      // Fetch the saved bill to pass accurate totals/payment info to the
-      // receipt. Printing failure should never block a bill that's
-      // already safely saved, so this is wrapped separately.
+      if (!shouldPrint) return;
+
+      // Printing is a bonus step - a missing/unconfigured printer should
+      // never be treated as a failed sale, so it's wrapped separately.
       try {
         final bill =
             await (db.select(db.bills)..where((b) => b.id.equals(billId)))
                 .getSingle();
-        final billItems = await (db.select(db.billItems)
-              ..where((i) => i.billId.equals(billId)))
-            .get();
         if (!mounted) return;
-        await ShopServices.printReceipt(
-          bill: bill,
-          items: billItems,
-          allProducts: allProducts,
-        );
+        await ShopServices.printReceipt(bill: bill, items: savedLines);
       } catch (_) {
-        // Printing is a bonus step — a missing/unconfigured printer
-        // shouldn't be treated as a failed sale.
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-              content: Text(
-                  'Bill saved, but the receipt could not be printed.')));
+              content:
+                  Text('Bill saved, but the receipt could not be printed.')));
         }
       }
     } catch (e) {
       setState(() => _saving = false);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not save bill: $e')),
-        );
-      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not save bill: $e')),
+      );
     }
+  }
+
+  Widget _paymentButton(String value, String label, IconData icon) {
+    final selected = _paymentType == value;
+    return ChoiceChip(
+      label: Row(mainAxisSize: MainAxisSize.min, children: [
+        Icon(icon, size: 16, color: selected ? Colors.white : Colors.black87),
+        const SizedBox(width: 6),
+        Text(label),
+      ]),
+      selected: selected,
+      selectedColor: Colors.teal,
+      labelStyle: TextStyle(color: selected ? Colors.white : Colors.black87),
+      onSelected: (_) => setState(() => _paymentType = value),
+    );
   }
 
   @override
@@ -135,7 +159,6 @@ class _BillingScreenState extends State<BillingScreen> {
       stream: db.watchAllProducts(),
       builder: (context, snapshot) {
         final products = snapshot.data ?? [];
-
         final categories = <String>{
           'All',
           ...products.map((p) => p.category).whereType<String>(),
@@ -144,15 +167,15 @@ class _BillingScreenState extends State<BillingScreen> {
         final filtered = products.where((p) {
           final matchesCategory =
               _selectedCategory == 'All' || p.category == _selectedCategory;
-          final matchesSearch =
-              p.name.toLowerCase().contains(_search.toLowerCase());
+          final matchesSearch = p.name
+              .toLowerCase()
+              .contains(_searchController.text.toLowerCase());
           return matchesCategory && matchesSearch;
         }).toList();
 
         return Scaffold(
           body: Row(
             children: [
-              // ---- Left panel: search, category chips, product grid ----
               Expanded(
                 flex: 3,
                 child: Padding(
@@ -160,18 +183,22 @@ class _BillingScreenState extends State<BillingScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      const Text('New Bill',
+                          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 16),
                       TextField(
-                        decoration: const InputDecoration(
-                          hintText: 'Search products…',
-                          prefixIcon: Icon(Icons.search),
+                        controller: _searchController,
+                        onChanged: (_) => setState(() {}),
+                        decoration: InputDecoration(
+                          hintText: 'Search products...',
+                          prefixIcon: const Icon(Icons.search),
                           isDense: true,
-                          border: OutlineInputBorder(),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                         ),
-                        onChanged: (v) => setState(() => _search = v),
                       ),
                       const SizedBox(height: 12),
                       SizedBox(
-                        height: 36,
+                        height: 40,
                         child: ListView.separated(
                           scrollDirection: Axis.horizontal,
                           itemCount: categories.length,
@@ -180,31 +207,29 @@ class _BillingScreenState extends State<BillingScreen> {
                             final cat = categories[i];
                             final selected = cat == _selectedCategory;
                             final color = cat == 'All'
-                                ? Colors.grey.shade700
+                                ? Colors.teal
                                 : _categoryPalette[i % _categoryPalette.length];
                             return ChoiceChip(
                               label: Text(cat),
                               selected: selected,
                               selectedColor: color,
-                              labelStyle: TextStyle(
-                                  color: selected ? Colors.white : Colors.black87),
-                              onSelected: (_) =>
-                                  setState(() => _selectedCategory = cat),
+                              labelStyle:
+                                  TextStyle(color: selected ? Colors.white : Colors.black87),
+                              onSelected: (_) => setState(() => _selectedCategory = cat),
                             );
                           },
                         ),
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 16),
                       Expanded(
                         child: filtered.isEmpty
                             ? const Center(child: Text('No products found.'))
                             : GridView.builder(
-                                gridDelegate:
-                                    const SliverGridDelegateWithFixedCrossAxisCount(
+                                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                                   crossAxisCount: 3,
                                   mainAxisSpacing: 12,
                                   crossAxisSpacing: 12,
-                                  childAspectRatio: 1.3,
+                                  childAspectRatio: 1.05,
                                 ),
                                 itemCount: filtered.length,
                                 itemBuilder: (context, i) {
@@ -212,50 +237,34 @@ class _BillingScreenState extends State<BillingScreen> {
                                   final outOfStock = p.stockQty <= 0;
                                   return Card(
                                     elevation: 0,
-                                    color: outOfStock
-                                        ? Colors.grey.shade200
-                                        : Colors.white,
+                                    color: outOfStock ? Colors.grey.shade200 : Colors.white,
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(12),
                                       side: BorderSide(color: Colors.grey.shade300),
                                     ),
                                     child: InkWell(
                                       borderRadius: BorderRadius.circular(12),
-                                      onTap:
-                                          outOfStock ? null : () => _addProduct(p),
+                                      onTap: outOfStock ? null : () => _addProduct(p),
                                       child: Padding(
                                         padding: const EdgeInsets.all(12),
                                         child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.spaceBetween,
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                           children: [
+                                            Text(p.name,
+                                                maxLines: 2,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: const TextStyle(fontWeight: FontWeight.w600)),
+                                            Text(p.salePrice.toStringAsFixed(0),
+                                                style: TextStyle(
+                                                    color: Colors.teal.shade700,
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: 16)),
                                             Text(
-                                              p.name,
-                                              maxLines: 2,
-                                              overflow: TextOverflow.ellipsis,
-                                              style: const TextStyle(
-                                                  fontWeight: FontWeight.w600),
-                                            ),
-                                            Text(
-                                              p.salePrice.toStringAsFixed(0),
+                                              outOfStock ? 'Out of stock' : 'Stock: ${p.stockQty}',
                                               style: TextStyle(
-                                                color: Colors.teal.shade700,
-                                                fontWeight: FontWeight.bold,
-                                                fontSize: 16,
-                                              ),
-                                            ),
-                                            Text(
-                                              outOfStock
-                                                  ? 'Out of stock'
-                                                  : 'Stock: ${p.stockQty}',
-                                              style: TextStyle(
-                                                fontSize: 11,
-                                                color: outOfStock
-                                                    ? Colors.red
-                                                    : Colors.black54,
-                                              ),
+                                                  fontSize: 11,
+                                                  color: outOfStock ? Colors.red : Colors.black54),
                                             ),
                                           ],
                                         ),
@@ -270,7 +279,6 @@ class _BillingScreenState extends State<BillingScreen> {
                 ),
               ),
               const VerticalDivider(width: 1),
-              // ---- Middle panel: cart, payment type, total, save ----
               Expanded(
                 flex: 3,
                 child: Padding(
@@ -278,84 +286,149 @@ class _BillingScreenState extends State<BillingScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Current bill',
-                          style: Theme.of(context).textTheme.titleMedium),
+                      const Text('Cart', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 12),
+                      if (_lines.isNotEmpty)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 6),
+                          child: Row(
+                            children: [
+                              Expanded(flex: 3, child: Text('Item', style: TextStyle(fontWeight: FontWeight.bold))),
+                              Expanded(flex: 2, child: Text('Qty', style: TextStyle(fontWeight: FontWeight.bold))),
+                              Expanded(flex: 2, child: Text('Total', style: TextStyle(fontWeight: FontWeight.bold))),
+                              SizedBox(width: 32),
+                            ],
+                          ),
+                        ),
                       Expanded(
                         child: _lines.isEmpty
-                            ? const Center(
-                                child: Text('Tap a product to add it to the bill.'))
-                            : SingleChildScrollView(
-                                child: DataTable(
-                                  columns: const [
-                                    DataColumn(label: Text('Item')),
-                                    DataColumn(label: Text('Qty')),
-                                    DataColumn(label: Text('Total')),
-                                    DataColumn(label: Text('')),
-                                  ],
-                                  rows: List.generate(_lines.length, (i) {
-                                    final l = _lines[i];
-                                    final matching = products
-                                        .where((p) => p.id == l.productId);
-                                    final stock =
-                                        matching.isEmpty ? 0 : matching.first.stockQty;
-                                    return DataRow(cells: [
-                                      DataCell(Text(l.productName)),
-                                      DataCell(Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          IconButton(
-                                            icon: const Icon(Icons.remove_circle_outline,
-                                                size: 18),
-                                            onPressed: () =>
-                                                _changeQty(i, -1, stock),
+                            ? const Center(child: Text('Tap a product to add it to the bill.'))
+                            : ListView.builder(
+                                itemCount: _lines.length,
+                                itemBuilder: (context, i) {
+                                  final l = _lines[i];
+                                  final match = products.where((p) => p.id == l.productId);
+                                  final stock = match.isEmpty ? l.quantity : match.first.stockQty;
+                                  return Padding(
+                                    padding: const EdgeInsets.symmetric(vertical: 4),
+                                    child: Row(
+                                      children: [
+                                        Expanded(flex: 3, child: Text(l.productName)),
+                                        Expanded(
+                                          flex: 2,
+                                          child: Row(
+                                            children: [
+                                              IconButton(
+                                                icon: const Icon(Icons.remove_circle_outline, size: 18),
+                                                onPressed: () => _changeQty(i, -1, stock),
+                                                padding: EdgeInsets.zero,
+                                                constraints: const BoxConstraints(),
+                                              ),
+                                              const SizedBox(width: 4),
+                                              Text('${l.quantity}'),
+                                              const SizedBox(width: 4),
+                                              IconButton(
+                                                icon: const Icon(Icons.add_circle_outline, size: 18),
+                                                onPressed: () => _changeQty(i, 1, stock),
+                                                padding: EdgeInsets.zero,
+                                                constraints: const BoxConstraints(),
+                                              ),
+                                            ],
                                           ),
-                                          Text('${l.quantity}'),
-                                          IconButton(
-                                            icon: const Icon(Icons.add_circle_outline,
-                                                size: 18),
-                                            onPressed: () => _changeQty(i, 1, stock),
-                                          ),
-                                        ],
-                                      )),
-                                      DataCell(Text(l.lineTotal.toStringAsFixed(0))),
-                                      DataCell(IconButton(
-                                        icon: const Icon(Icons.close,
-                                            size: 18, color: Colors.red),
-                                        onPressed: () => _removeLine(i),
-                                      )),
-                                    ]);
-                                  }),
-                                ),
+                                        ),
+                                        Expanded(flex: 2, child: Text(l.lineTotal.toStringAsFixed(2))),
+                                        IconButton(
+                                          icon: const Icon(Icons.close, size: 18, color: Colors.red),
+                                          onPressed: () => _removeLine(i),
+                                          padding: EdgeInsets.zero,
+                                          constraints: const BoxConstraints(),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                },
                               ),
                       ),
                       const Divider(),
-                      SegmentedButton<String>(
-                        segments: const [
-                          ButtonSegment(value: 'cash', label: Text('Cash')),
-                          ButtonSegment(value: 'credit', label: Text('Credit')),
-                        ],
-                        selected: {_paymentType},
-                        onSelectionChanged: (s) =>
-                            setState(() => _paymentType = s.first),
+                      const SizedBox(height: 8),
+                      const Text('Customer Name',
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                      const SizedBox(height: 6),
+                      TextField(
+                        controller: _customerController,
+                        decoration: const InputDecoration(
+                          hintText: 'Enter customer name',
+                          prefixIcon: Icon(Icons.person_outline),
+                          isDense: true,
+                          border: OutlineInputBorder(),
+                        ),
                       ),
+                      const SizedBox(height: 12),
+                      const Text('Payment Method',
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                      const SizedBox(height: 6),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          _paymentButton('cash', 'Cash', Icons.payments_outlined),
+                          _paymentButton('card', 'Card', Icons.credit_card),
+                          _paymentButton('mobile', 'Mobile/QR', Icons.qr_code),
+                          _paymentButton('credit', 'Udhaar', Icons.menu_book_outlined),
+                          _paymentButton('partial', 'Partial Pay', Icons.pie_chart_outline),
+                        ],
+                      ),
+                      if (_paymentType == 'partial') ...[
+                        const SizedBox(height: 12),
+                        TextField(
+                          controller: _paidAmountController,
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          decoration: const InputDecoration(
+                            labelText: 'Amount currently paying',
+                            hintText: '0.00',
+                            isDense: true,
+                            border: OutlineInputBorder(),
+                          ),
+                        ),
+                      ],
                       const SizedBox(height: 12),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text('Total: ${_total.toStringAsFixed(0)}',
-                              style: Theme.of(context).textTheme.titleLarge),
-                          FilledButton.icon(
-                            onPressed: _lines.isEmpty || _saving
-                                ? null
-                                : () => _saveBill(products),
-                            icon: _saving
-                                ? const SizedBox(
-                                    width: 16,
-                                    height: 16,
-                                    child: CircularProgressIndicator(strokeWidth: 2))
-                                : const Icon(Icons.print),
-                            label: Text(_saving ? 'Saving…' : 'Save bill & print'),
+                          const Text('Total', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                          Text(_total.toStringAsFixed(2),
+                              style: const TextStyle(
+                                  fontSize: 20, fontWeight: FontWeight.bold, color: Colors.teal)),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: _lines.isEmpty || _saving
+                                  ? null
+                                  : () => _saveBill(shouldPrint: true),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: Colors.teal,
+                                side: const BorderSide(color: Colors.teal),
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                              ),
+                              icon: const Icon(Icons.print, size: 18),
+                              label: const Text('Save & Print'),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: FilledButton(
+                              onPressed: _lines.isEmpty || _saving
+                                  ? null
+                                  : () => _saveBill(shouldPrint: false),
+                              style: FilledButton.styleFrom(
+                                  backgroundColor: Colors.teal,
+                                  padding: const EdgeInsets.symmetric(vertical: 14)),
+                              child: Text(_saving ? 'Saving...' : 'Save Bill'),
+                            ),
                           ),
                         ],
                       ),
@@ -363,8 +436,8 @@ class _BillingScreenState extends State<BillingScreen> {
                   ),
                 ),
               ),
-              // ---- Right panel: calculator ----
-              const BillingNumpad(),
+              const VerticalDivider(width: 1),
+              const SizedBox(width: 280, child: BillingNumpad()),
             ],
           ),
         );

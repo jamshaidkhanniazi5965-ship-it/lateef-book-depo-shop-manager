@@ -1,10 +1,9 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 
 import '../database/database.dart';
-import '../main.dart';
 import '../services/shop_services.dart';
 
 class AnalyticsScreen extends StatefulWidget {
@@ -182,8 +181,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
           }
           final bills = billSnapshot.data ?? [];
 
-          return StreamBuilder<List<BillItem>>(
-            stream: db.select(db.billItems).watch(),
+          return StreamBuilder<List<BillLine>>(
+            stream: db.select(db.billLines).watch(),
             builder: (context, itemSnapshot) {
               final items = itemSnapshot.data ?? [];
 
@@ -202,7 +201,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                       for (final item in billItemsForBill) {
                         sales += item.unitPrice * item.quantity;
                         final prod = productMap[item.productId];
-                        cost += (prod?.costPrice ?? 0.0) * item.quantity;
+                        cost += (prod?.purchasePrice ?? 0.0) * item.quantity;
                       }
                     }
                     return {
@@ -213,17 +212,17 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                   }
 
                   final todayBills =
-                      bills.where((b) => _isSameDay(b.date, today)).toList();
+                      bills.where((b) => _isSameDay(b.createdAt, today)).toList();
                   final todayData = calculateMetrics(todayBills);
 
                   final weeklyBills = bills
-                      .where((b) => b.date
+                      .where((b) => b.createdAt
                           .isAfter(startOfWeek.subtract(const Duration(seconds: 1))))
                       .toList();
                   final weeklyData = calculateMetrics(weeklyBills);
 
                   final monthlyBills = bills
-                      .where((b) => b.date.isAfter(
+                      .where((b) => b.createdAt.isAfter(
                           startOfMonth.subtract(const Duration(seconds: 1))))
                       .toList();
                   final monthlyData = calculateMetrics(monthlyBills);
@@ -232,7 +231,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                   if (_customRange != null) {
                     final customBills = bills
                         .where((b) => _isInRange(
-                            b.date, _customRange!.start, _customRange!.end))
+                            b.createdAt, _customRange!.start, _customRange!.end))
                         .toList();
                     customData = calculateMetrics(customBills);
                   }
@@ -244,7 +243,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                   for (int i = 6; i >= 0; i--) {
                     final dayDate = today.subtract(Duration(days: i));
                     final dayBills =
-                        bills.where((b) => _isSameDay(b.date, dayDate)).toList();
+                        bills.where((b) => _isSameDay(b.createdAt, dayDate)).toList();
                     final dayMetrics = calculateMetrics(dayBills);
                     final label =
                         i == 0 ? 'Today' : weekDayNames[dayDate.weekday - 1];
@@ -402,7 +401,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     );
   }
 
-  Widget _buildMetricBox(String label, String value, IconData icon, Color color) {
+  Widget _buildMetricBox(String label, String value, IconData? icon, Color color) {
     return Expanded(
       child: Container(
         padding: const EdgeInsets.all(12),
@@ -413,8 +412,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
         ),
         child: Row(
           children: [
-            Icon(icon, size: 22, color: color),
-            const SizedBox(width: 8),
+            if (icon != null) ...[Icon(icon, size: 22, color: color), const SizedBox(width: 8)],
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -503,3 +501,4 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     );
   }
 }
+
