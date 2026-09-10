@@ -68,6 +68,37 @@ class SettingsScreen extends StatelessWidget {
     }
   }
 
+  void _showTerms(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Terms & Conditions'),
+        content: SizedBox(
+          width: 500,
+          child: SingleChildScrollView(
+            child: Text(
+              "This software (\"Lateef Book Depo\") is developed and owned by Jamshaid Niazi and his company Niazi Tech. All rights to this application, including its source code, design, and functionality, are reserved to the developer.\n\n"
+              "1. Ownership: This application is proprietary software. Jamshaid Niazi and Niazi Tech retain full ownership and all intellectual property rights.\n\n"
+              "2. License to Use: This software is licensed, not sold, for use only by the person or business it was provided to. It may not be copied, resold, redistributed, or shared without prior written permission from Jamshaid Niazi.\n\n"
+              "3. No Unauthorized Use: Reproducing, modifying, reverse-engineering, or reselling this software without explicit permission is strictly prohibited.\n\n"
+              "4. Data: All data entered into this application is stored locally on the user's device. The developer is not responsible for data loss due to hardware failure, improper use, or lack of backups.\n\n"
+              "5. No Warranty: This software is provided \"as is\" without warranty of any kind. The developer is not liable for any business losses arising from its use.\n\n"
+              "6. Contact: For permissions, support, or licensing inquiries, contact Jamshaid Niazi (Niazi Tech) at jamshaidkhanniazi.5965@gmail.com.\n\n"
+              "\u00A9 2026 Jamshaid Niazi / Niazi Tech. All rights reserved.",
+              style: TextStyle(fontSize: 13, height: 1.5),
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -120,31 +151,39 @@ class SettingsScreen extends StatelessWidget {
                 context: context,
                 title: 'About',
                 icon: Icons.info_outline,
-                children: const [
-                  ListTile(
+                children: [
+                  const ListTile(
                     contentPadding: EdgeInsets.zero,
                     leading: Icon(Icons.storefront, color: _accentColor),
-                    title: Text('Shop Manager'),
+                    title: Text('Lateef Book Depo'),
                     subtitle: Text('v1.0.0 - Desktop Edition'),
                   ),
-                  ListTile(
+                  const ListTile(
                     contentPadding: EdgeInsets.zero,
                     leading: Icon(Icons.wifi_off, color: _accentColor),
                     title: Text('Fully offline'),
                     subtitle:
                         Text('All data is stored locally. No internet connection required.'),
                   ),
-                  ListTile(
+                  const ListTile(
                     contentPadding: EdgeInsets.zero,
                     leading: Icon(Icons.person_outline, color: _accentColor),
                     title: Text('Developer'),
                     subtitle: Text('Jamshaid Niazi'),
                   ),
-                  ListTile(
+                  const ListTile(
                     contentPadding: EdgeInsets.zero,
                     leading: Icon(Icons.business_outlined, color: _accentColor),
                     title: Text('Developed by'),
                     subtitle: Text('Niazi Tech'),
+                  ),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.description_outlined, color: _accentColor),
+                    title: const Text('Terms & Conditions'),
+                    subtitle: const Text('View license and usage terms'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => _showTerms(context),
                   ),
                 ],
               ),
@@ -155,3 +194,7 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 }
+
+
+
+

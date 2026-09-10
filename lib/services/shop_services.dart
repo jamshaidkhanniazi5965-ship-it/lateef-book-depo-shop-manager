@@ -1,4 +1,4 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:drift/drift.dart' as drift;
@@ -233,3 +233,4 @@ class ShopServices {
     }
   }
 }
+

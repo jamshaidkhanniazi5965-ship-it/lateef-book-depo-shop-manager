@@ -49,6 +49,100 @@ class _ReportsScreenState extends State<ReportsScreen> {
     );
   }
 
+
+  
+Future<void> _showBillDetails(BuildContext context, Bill b, double profit) async {
+  
+  final items = await db.getBillLinesForBill(b.id);
+  
+  final dateStr = '${b.createdAt.toLocal()}'.substring(0, 16);
+  
+  if (!context.mounted) return;
+  
+  await showDialog(
+  
+    context: context,
+  
+    builder: (ctx) => AlertDialog(
+  
+      title: const Text('Lateef Book Depo'),
+  
+      content: SizedBox(
+  
+        width: 380,
+  
+        child: SingleChildScrollView(
+  
+          child: Column(
+  
+            crossAxisAlignment: CrossAxisAlignment.start,
+  
+            mainAxisSize: MainAxisSize.min,
+  
+            children: [
+  
+              Text('Bill #${b.id}'),
+  
+              Text('Date: $dateStr'),
+  
+              Text('Customer: ${b.customerName}'),
+  
+              Text('Payment: ${b.isCleared ? b.paymentType.toUpperCase() : "PARTIAL (Pending)"}'),
+  
+              const Divider(),
+  
+              ...items.map((item) => Padding(
+  
+                    padding: const EdgeInsets.symmetric(vertical: 2),
+  
+                    child: Row(
+  
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  
+                      children: [
+  
+                        Expanded(child: Text(item.productName)),
+  
+                        Text('${item.quantity} x ${item.unitPrice.toStringAsFixed(0)}'),
+  
+                      ],
+  
+                    ),
+  
+                  )),
+  
+              const Divider(),
+  
+              Text('Total: Rs. ${b.totalAmount.toStringAsFixed(2)}',
+  
+                  style: const TextStyle(fontWeight: FontWeight.bold)),
+  
+  
+            ],
+  
+          ),
+  
+        ),
+  
+      ),
+  
+      actions: [
+  
+        TextButton(
+  
+          onPressed: () => Navigator.pop(ctx),
+  
+          child: const Text('Close'),
+  
+        ),
+  
+      ],
+  
+    ),
+  
+  );
+  
+}
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<List<Bill>>(
@@ -121,11 +215,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                   ? b.paymentType.toUpperCase()
                                   : 'PARTIAL (Pending)';
                               return ListTile(
+                                onTap: () => _showBillDetails(context, b, profit),
                                 leading: CircleAvatar(
                                   backgroundColor: Colors.green.shade50,
                                   child: const Icon(Icons.arrow_upward, color: Colors.green),
                                 ),
-                                title: Text('Bill #${b.id} — ${b.customerName}'),
+                                title: Text('Bill #${b.id} - ${b.customerName}'),
                                 subtitle: Text('Date: $dateStr | Method: $method'),
                                 trailing: Column(
                                   crossAxisAlignment: CrossAxisAlignment.end,
@@ -150,3 +245,5 @@ class _ReportsScreenState extends State<ReportsScreen> {
     );
   }
 }
+
+

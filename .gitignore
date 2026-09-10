@@ -43,3 +43,10 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Local backup files (from manual edits)
+*.bak
+*.bak2
+*.bak3
+*.sqlite
+*.db

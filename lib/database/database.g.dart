@@ -2221,3 +2221,4 @@ class $AppDatabaseManager {
   $$BillLinesTableTableManager get billLines =>
       $$BillLinesTableTableManager(_db, _db.billLines);
 }
+

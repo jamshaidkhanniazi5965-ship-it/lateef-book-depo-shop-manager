@@ -1,4 +1,4 @@
-﻿import 'package:printing/printing.dart';
+import 'package:printing/printing.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import '../database/database.dart';
@@ -23,10 +23,7 @@ Future<void> printReceipt({
         return pw.Column(
           crossAxisAlignment: pw.CrossAxisAlignment.start,
           children: [
-            pw.Center(
-              child: pw.Text('SHOP RECEIPT',
-                  style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
-            ),
+            pw.Center(               child: pw.Text('Lateef Book Depo',                   style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),             ),             pw.Center(               child: pw.Text('SHOP RECEIPT',                   style: pw.TextStyle(fontSize: 12)),             ),
             pw.Divider(),
             pw.Text('Bill #: $billId'),
             pw.Text('Date & Time: $formattedDate'),
@@ -65,3 +62,4 @@ Future<void> printReceipt({
     onLayout: (PdfPageFormat format) async => doc.save(),
   );
 }
+

@@ -27,13 +27,9 @@ bool FlutterWindow::OnCreate() {
   RegisterPlugins(flutter_controller_->engine());
   SetChildContent(flutter_controller_->view()->GetNativeWindow());
 
-  flutter_controller_->engine()->SetNextFrameCallback([&]() {
-    this->Show();
-  });
-
-  // Flutter can complete the first frame before the "show window" callback is
-  // registered. The following call ensures a frame is pending to ensure the
-  // window is shown. It is a no-op if the first frame hasn't completed yet.
+  // NOTE: window_manager (Dart side, see lib/main.dart) controls
+  // visibility/maximize state, so we intentionally do not auto-Show()
+  // here to avoid racing with its show()/maximize() calls.
   flutter_controller_->ForceRedraw();
 
   return true;
@@ -69,3 +65,4 @@ FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
 
   return Win32Window::MessageHandler(hwnd, message, wparam, lparam);
 }
+

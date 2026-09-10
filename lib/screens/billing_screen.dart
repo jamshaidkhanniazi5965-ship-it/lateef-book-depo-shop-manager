@@ -231,11 +231,11 @@ class _BillingScreenState extends State<BillingScreen> {
                         child: filtered.isEmpty
                             ? const Center(child: Text('No products found.'))
                             : GridView.builder(
-                                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount: 3,
+                                gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                                  maxCrossAxisExtent: 180,
                                   mainAxisSpacing: 12,
                                   crossAxisSpacing: 12,
-                                  childAspectRatio: 1.05,
+                                  mainAxisExtent: 130,
                                 ),
                                 itemCount: filtered.length,
                                 itemBuilder: (context, i) {
@@ -443,7 +443,7 @@ class _BillingScreenState extends State<BillingScreen> {
                 ),
               ),
               const VerticalDivider(width: 1),
-              const SizedBox(width: 280, child: BillingNumpad()),
+              const BillingNumpad(),
             ],
           ),
         );
@@ -451,3 +451,5 @@ class _BillingScreenState extends State<BillingScreen> {
     );
   }
 }
+
+

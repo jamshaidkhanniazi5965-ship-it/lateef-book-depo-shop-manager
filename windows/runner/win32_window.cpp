@@ -207,6 +207,13 @@ Win32Window::MessageHandler(HWND hwnd,
       return 0;
     }
 
+    case WM_GETMINMAXINFO: {
+      auto info = reinterpret_cast<MINMAXINFO*>(lparam);
+      info->ptMinTrackSize.x = 1100;
+      info->ptMinTrackSize.y = 650;
+      return 0;
+    }
+
     case WM_ACTIVATE:
       if (child_content_ != nullptr) {
         SetFocus(child_content_);
@@ -286,3 +293,5 @@ void Win32Window::UpdateTheme(HWND const window) {
                           &enable_dark_mode, sizeof(enable_dark_mode));
   }
 }
+
+

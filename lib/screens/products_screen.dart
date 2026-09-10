@@ -162,17 +162,6 @@ class _ProductsScreenState extends State<ProductsScreen> {
               children: [
                 Row(
                   children: [
-                    Text('Inventory & Products',
-                        style: Theme.of(context).textTheme.headlineSmall),
-                    const Spacer(),
-                    const Icon(Icons.person_outline),
-                    const SizedBox(width: 6),
-                    const Text('Admin / Cashier'),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                Row(
-                  children: [
                     Text('Product Management',
                         style: Theme.of(context).textTheme.titleLarge),
                     const Spacer(),
@@ -212,6 +201,8 @@ class _ProductsScreenState extends State<ProductsScreen> {
                             side: BorderSide(color: Colors.grey.shade300),
                           ),
                           child: SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: SingleChildScrollView(
                             child: DataTable(
                               headingRowColor:
                                   WidgetStateProperty.all(Colors.grey.shade100),
@@ -248,6 +239,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                                 ]);
                               }).toList(),
                             ),
+                            ),
                           ),
                         ),
                 ),
@@ -259,3 +251,4 @@ class _ProductsScreenState extends State<ProductsScreen> {
     );
   }
 }
+

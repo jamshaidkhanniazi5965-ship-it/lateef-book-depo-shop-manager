@@ -19,7 +19,7 @@ class _UdhaarScreenState extends State<UdhaarScreen> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: Text('Receive Payment — Bill #${bill.id}'),
+          title: Text('Receive Payment - Bill #${bill.id}'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -299,7 +299,7 @@ class _UdhaarScreenState extends State<UdhaarScreen> {
                                                             .spaceBetween,
                                                     children: [
                                                       Text(
-                                                          '• ${l.productName} (x${l.quantity})'),
+                                                          '${l.productName} (x${l.quantity})'),
                                                       Text(
                                                           'Rs. ${l.lineTotal.toStringAsFixed(2)}'),
                                                     ],
@@ -324,5 +324,7 @@ class _UdhaarScreenState extends State<UdhaarScreen> {
     );
   }
 }
+
+
 
 
