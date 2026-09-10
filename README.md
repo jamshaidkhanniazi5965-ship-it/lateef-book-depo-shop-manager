@@ -1,17 +1,58 @@
-# shop_management_app
+# Lateef Book Depo — Shop Manager
 
-A new Flutter project.
+An offline-first Point of Sale, inventory, and Udhaar (credit) management system built in Flutter for a real stationary shop. Designed, developed, and delivered end-to-end as my first paid client project.
 
-## Getting Started
+## Overview
 
-This project is a starting point for a Flutter application.
+Lateef Book Depo needed a way to move away from handwritten bills and manually tracked customer credit. This app replaces that entirely with a native Windows desktop application — no internet dependency, no subscriptions, running locally on the shop owner's own laptop.
 
-A few resources to get you started if this is your first Flutter project:
+## Features
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+- **Billing & Checkout** — searchable product grid, live cart, quantity adjustments, category filters
+- **Multiple Payment Methods** — Cash, Card, Mobile/QR, Udhaar (credit), and Partial Pay
+- **Udhaar (Credit) Ledger** — track customer dues, receive partial or full payments against open bills
+- **Inventory Management** — product catalog with stock tracking and category organization
+- **Receipt Printing** — thermal-printer-ready (80mm roll) receipt generation via PDF layout
+- **Reports & Analytics** — sales history, profit tracking, and progress dashboards
+- **Offline-First** — local SQLite database (via Drift), zero internet dependency
+- **Database Backup & Restore** — JSON export/import for data safety
+- **Light & Dark Mode**
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Tech Stack
+
+- **Framework:** Flutter (Windows desktop)
+- **Database:** Drift (SQLite)
+- **PDF/Printing:** `printing` and `pdf` packages
+- **Window Management:** `window_manager`
+- **Packaging:** Inno Setup (Windows installer)
+
+## Screenshots
+
+<details>
+<summary><b>Click to view screenshots</b></summary>
+<br>
+
+**Billing & Checkout**
+![Billing Screen](screenshots/billing.png)
+
+**Products / Inventory**
+![Products Screen](screenshots/products.png)
+
+**Udhaar Book (Credit Ledger)**
+![Udhaar Book](screenshots/udhaar.png)
+
+**Reports**
+![Reports Screen](screenshots/reports.png)
+
+**Analytics**
+![Analytics Screen](screenshots/analytics.png)
+
+</details>
+
+## Why This Project Matters to Me
+
+I'm a first-year Computer Science student at PIEAS. This was the first time a real business trusted me with a real problem — and the first time I got paid for solving it. From requirements gathering, to development, to on-site installation and printer setup on the client's own laptop, this project was built and delivered entirely on my own.
+
+---
+
+Built by [Jamshaid Khan Niazi](https://jamshaidkhanniazi5965-ship-it.github.io) — Niazi Tech
