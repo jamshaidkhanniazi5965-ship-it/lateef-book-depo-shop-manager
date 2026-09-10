@@ -33,19 +33,22 @@ Lateef Book Depo needed a way to move away from handwritten bills and manually t
 <br>
 
 **Billing & Checkout**
-![Billing Screen](screenshots/billing.png)
+![Billing Screen](Screenshots/billing.png)
 
 **Products / Inventory**
-![Products Screen](screenshots/products.png)
+![Products Screen](Screenshots/products.png)
 
 **Udhaar Book (Credit Ledger)**
-![Udhaar Book](screenshots/udhaar.png)
+![Udhaar Book](Screenshots/udhaar.png)
 
 **Reports**
-![Reports Screen](screenshots/reports.png)
+![Reports Screen](Screenshots/Analytics1.png)
 
 **Analytics**
-![Analytics Screen](screenshots/analytics.png)
+![Analytics Screen](screenshots/Analytics2.png)
+
+**Analytics**
+![Analytics Screen](screenshots/Analytics3.png)
 
 </details>
 
