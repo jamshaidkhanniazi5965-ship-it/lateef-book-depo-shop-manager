@@ -42,7 +42,7 @@ Lateef Book Depo needed a way to move away from handwritten bills and manually t
 ![Udhaar Book](Screenshots/udhaarbook.png)
 
 **Reports**
-![Reports Screen](Screenshots/Analytics1.png)
+![Reports Screen](Screenshots/Analytics.png)
 
 **Analytics**
 ![Analytics Screen](screenshots/Analytics2.png)
