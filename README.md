@@ -45,10 +45,10 @@ Lateef Book Depo needed a way to move away from handwritten bills and manually t
 ![Reports Screen](Screenshots/Analytics.png)
 
 **Analytics**
-![Analytics Screen](screenshots/Analytics2.png)
+![Analytics Screen](Screenshots/Analytics2.png)
 
 **Analytics**
-![Analytics Screen](screenshots/Analytics3.png)
+![Analytics Screen](Screenshots/Analytics3png)
 
 </details>
 
