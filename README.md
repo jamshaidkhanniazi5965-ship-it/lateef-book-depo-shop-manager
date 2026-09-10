@@ -39,7 +39,7 @@ Lateef Book Depo needed a way to move away from handwritten bills and manually t
 ![Products Screen](Screenshots/products.png)
 
 **Udhaar Book (Credit Ledger)**
-![Udhaar Book](Screenshots/udhaar.png)
+![Udhaar Book](Screenshots/udhaarbook.png)
 
 **Reports**
 ![Reports Screen](Screenshots/Analytics1.png)
