@@ -3,9 +3,9 @@
 <img src="screenshots/00-banner.jpg" alt="Lateef Book Depo: Shop Manager" width="100%">
 
 <p>
-<picture><img alt="Type: client project" src="https://img.shields.io/badge/type-paid%20client%20project-0f9d8a?style=flat-square" height="28"></picture>
-<picture><img alt="Status: delivered and in use" src="https://img.shields.io/badge/status-delivered%20%26%20in%20use-2e7d32?style=flat-square" height="28"></picture>
-<picture><img alt="Platform: Windows" src="https://img.shields.io/badge/platform-windows%20desktop-0f1b2d?style=flat-square" height="28"></picture>
+<picture><img alt="Type: client project" src="https://img.shields.io/badge/Type-Paid%20Client%20Project-0f9d8a?style=flat-square" height="28"></picture>
+<picture><img alt="Status: delivered and in use" src="https://img.shields.io/badge/Status-Delivered%20%26%20In%20Use-2e7d32?style=flat-square" height="28"></picture>
+<picture><img alt="Platform: Windows" src="https://img.shields.io/badge/Platform-Windows%20Desktop-0f1b2d?style=flat-square" height="28"></picture>
 </p>
 
 <p>
